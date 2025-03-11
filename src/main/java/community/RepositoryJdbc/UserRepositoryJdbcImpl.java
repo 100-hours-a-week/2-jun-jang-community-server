@@ -17,9 +17,9 @@ public class UserRepositoryJdbcImpl implements UserRepositoryJdbc{
     private final RowMapper<UserJdbc> userJdbcRowMapper= (rs, rowNum) -> {
         UserJdbc user= new UserJdbc(
                 rs.getString("user_id"),
+                rs.getString("nickname"),
                 rs.getString("email"),
                 rs.getString("password"),
-                rs.getString("nickname"),
                 rs.getString("user_profile")
         );
         user.setCreatedAt(rs.getObject("created_at", java.time.OffsetDateTime.class));
@@ -41,7 +41,12 @@ public class UserRepositoryJdbcImpl implements UserRepositoryJdbc{
         List<UserJdbc> users = jdbcTemplate.query(sql, userJdbcRowMapper, userId);
         return users.stream().findFirst();
     }
-
+    @Override
+    public Optional<UserJdbc> findByEmail(String email) {
+        String sql = "SELECT * FROM user WHERE email = ?";
+        List<UserJdbc> users = jdbcTemplate.query(sql, userJdbcRowMapper, email);
+        return users.stream().findFirst();
+    }
     // 사용자 업데이트 (updatedAt만 갱신)
     @Override
     public void updateUserInfo(String userId, String nickname, String userProfile) {

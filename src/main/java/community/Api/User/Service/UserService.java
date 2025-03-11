@@ -5,4 +5,5 @@ import community.Api.User.Dtos.UserResponse;
 
 public interface UserService {
     UserResponse.CreateUserResponse CreateUserService(UserRequest.CreateUserRequest request);
+    UserResponse.LoginUserResponse LoginUserService(UserRequest.LoginUserRequest request);
 }

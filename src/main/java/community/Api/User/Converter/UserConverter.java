@@ -10,4 +10,10 @@ public class UserConverter {
                 .userId(user.getUserId())
                 .build();
     }
+    public static UserResponse.LoginUserResponse toLoginUserResponse(String accessToken, String refreshToken) {
+        return UserResponse.LoginUserResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
 }

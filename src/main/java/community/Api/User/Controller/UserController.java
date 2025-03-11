@@ -2,31 +2,28 @@ package community.Api.User.Controller;
 
 import community.Api.User.Dtos.UserRequest;
 import community.Api.User.Dtos.UserResponse;
+import community.Api.User.Service.UserService;
 import community.Common.ApiResponse;
 import community.utill.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
-    @Autowired
-    private JwtUtil jwtUtill;
+
+    private final UserService userService;
     //더미 값만 생성
     @PostMapping("")
     public ApiResponse<UserResponse.CreateUserResponse> CreateUserController(@RequestBody UserRequest.CreateUserRequest request){
 
-        return new ApiResponse<>(UserResponse.CreateUserResponse.builder().userId("USER-"+ UUID.randomUUID().toString()).build(),"201");
+        return new ApiResponse<>(userService.CreateUserService(request),"201");
     }
     @PostMapping("/token")
     public ApiResponse<UserResponse.LoginUserResponse> LoginUserController(@RequestBody UserRequest.LoginUserRequest request){
-        return new ApiResponse<>(UserResponse.LoginUserResponse.builder()
-                .accessToken(jwtUtill.generateAccessToken("User-xxxx"))
-                .refreshToken(jwtUtill.generateRefreshToken("USER-xxxx")).build(),"200");
+        return new ApiResponse<>(userService.LoginUserService(request),"200");
     }
     @GetMapping("/profile")
     public ApiResponse<UserResponse.GetUserResponse> GetUserController(){
