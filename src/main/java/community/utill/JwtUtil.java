@@ -1,15 +1,18 @@
 package community.utill;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Date;
 
 @Component
+@Slf4j
 public class JwtUtil {
     private static String SECRET_KEY;
     private static Long ACCESS_TOKEN_EXPIRATION;
@@ -23,6 +26,9 @@ public class JwtUtil {
         this.SECRET_KEY = secretKey;
         this.ACCESS_TOKEN_EXPIRATION = accessTokenExpiration;
         this.REFRESH_TOKEN_EXPIRATION = refreshTokenExpiration;
+    }
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
 
     public static String generateAccessToken(String userId) {
@@ -51,4 +57,34 @@ public class JwtUtil {
         Claims claims = parser.parseClaimsJws(token).getBody();
         return claims.getSubject();
     }
+
+    // 토큰 검증
+    public Claims validateToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    // 토큰이 만료되었는지 확인
+    public boolean isTokenExpired(String token) {
+        try {
+            return validateToken(token).getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        }
+    }
+    public static String getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            log.warn("Authentication is NULL in DELETE request");
+        }
+
+        log.info("Authenticated userId: {}", authentication.getName());
+        return authentication.getName();
+    }
+
+
 }

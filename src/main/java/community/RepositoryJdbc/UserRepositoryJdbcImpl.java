@@ -20,7 +20,8 @@ public class UserRepositoryJdbcImpl implements UserRepositoryJdbc{
                 rs.getString("nickname"),
                 rs.getString("email"),
                 rs.getString("password"),
-                rs.getString("user_profile")
+                rs.getString("user_profile"),
+                rs.getObject("deleted_at",java.time.OffsetDateTime.class)
         );
         user.setCreatedAt(rs.getObject("created_at", java.time.OffsetDateTime.class));
         user.setUpdatedAt(rs.getObject("updated_at", java.time.OffsetDateTime.class));
@@ -37,13 +38,14 @@ public class UserRepositoryJdbcImpl implements UserRepositoryJdbc{
     }
     @Override
     public Optional<UserJdbc> findByUserId(String userId) {
-        String sql = "SELECT * FROM user WHERE user_id = ?";
+        String sql = "SELECT * FROM user WHERE user_id = ? AND deleted_at IS NULL"; // ✅ 삭제되지 않은 유저만 조회
         List<UserJdbc> users = jdbcTemplate.query(sql, userJdbcRowMapper, userId);
         return users.stream().findFirst();
     }
+
     @Override
     public Optional<UserJdbc> findByEmail(String email) {
-        String sql = "SELECT * FROM user WHERE email = ?";
+        String sql = "SELECT * FROM user WHERE email = ? AND deleted_at IS NULL"; // ✅ 삭제되지 않은 유저만 조회
         List<UserJdbc> users = jdbcTemplate.query(sql, userJdbcRowMapper, email);
         return users.stream().findFirst();
     }
@@ -63,8 +65,8 @@ public class UserRepositoryJdbcImpl implements UserRepositoryJdbc{
     // userId로 사용자 삭제
     @Override
     public void deleteByUserId(String userId) {
-        String sql = "DELETE FROM user WHERE user_id = ?";
-        jdbcTemplate.update(sql, userId);
+        String sql = "UPDATE user SET deleted_at = ? WHERE user_id = ?";
+        jdbcTemplate.update(sql, OffsetDateTime.now(), userId);
     }
 
 }

@@ -4,7 +4,7 @@ server:
 
 jwt:
   secret-key: "secretsecretsecretsecretsecretsecretsecretsecretsecret"
-  ACCESS_TOKEN_EXPIRATION: 180000
+  ACCESS_TOKEN_EXPIRATION: 540000
   REFRESH_TOKEN_EXPIRATION: 604800000
 
 

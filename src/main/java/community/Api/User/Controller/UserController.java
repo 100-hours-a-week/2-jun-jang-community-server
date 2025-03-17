@@ -5,16 +5,31 @@ import community.Api.User.Dtos.UserResponse;
 import community.Api.User.Service.UserService;
 import community.Common.ApiResponse;
 import community.utill.JwtUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
+    private String getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            log.warn("Authentication is NULL in DELETE request");
+        }
+
+        log.info("Authenticated userId: {}", authentication.getName());
+        return authentication.getName();
+    }
     //더미 값만 생성
     @PostMapping("")
     public ApiResponse<UserResponse.CreateUserResponse> CreateUserController(@RequestBody UserRequest.CreateUserRequest request){
@@ -27,23 +42,22 @@ public class UserController {
     }
     @GetMapping("/profile")
     public ApiResponse<UserResponse.GetUserResponse> GetUserController(){
-        return new ApiResponse<>(UserResponse.GetUserResponse.builder()
-                .email("test@email.com")
-                .nickname("준")
-                .profileImage("https://www.notion.so/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2Fcf024025-486d-4514-84ae-3a7c5951c17c%2F2a13714f-0a1e-4954-bebe-1d8e95db1e8c%2Fimage.png?table=block&id=5dc293f8-0db6-423d-8e2e-037a1764f96b&spaceId=cf024025-486d-4514-84ae-3a7c5951c17c&width=2000&userId=32221845-7314-4f9b-860f-b6cd2cfebc4f&cache=v2")
-                .build(),"200");
+
+        return new ApiResponse<>(userService.GetUserService(getAuthenticatedUserId()),"200");
     }
     @PatchMapping("/profile")
     public ApiResponse<String>PatchUserProfileController(@RequestBody UserRequest.UpdateUserProfileRequest request){
-        return new ApiResponse<>("프로필 변경에 성공했습니다.","200");
+
+        return new ApiResponse<>(userService.PatchUserProfileService(getAuthenticatedUserId(),request),"200");
     }
     @PutMapping("/password")
     public ApiResponse<String>PutUserPasswordController(@RequestBody UserRequest.UpdateUserPasswordRequest request){
-        return new ApiResponse<>("비밀번호 변경에 성공했습니다.","200");
+        return new ApiResponse<>(userService.PutUserPasswordService(getAuthenticatedUserId(),request),"200");
     }
+    @Transactional
     @DeleteMapping("")
     public ApiResponse<String>DeleteUserController(){
-        return new ApiResponse<>("탈퇴가 완료되었습니다.","200");
+        return new ApiResponse<>(userService.DeleteUserService(getAuthenticatedUserId()),"200");
     }
 
 }

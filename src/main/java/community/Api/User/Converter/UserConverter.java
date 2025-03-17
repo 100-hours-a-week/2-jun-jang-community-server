@@ -16,4 +16,11 @@ public class UserConverter {
                 .refreshToken(refreshToken)
                 .build();
     }
+    public static UserResponse.GetUserResponse toGetUserResponse(UserJdbc user) {
+        return UserResponse.GetUserResponse.builder()
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .profileImage(user.getUserProfile())
+                .build();
+    }
 }

@@ -16,5 +16,11 @@ public class UserException {
             super(message);
         }
     }
+    @NoArgsConstructor
+    public static class UserNotFoundException extends RuntimeException {
+        public UserNotFoundException(String message) {
+            super(message);
+        }
+    }
 }
 
