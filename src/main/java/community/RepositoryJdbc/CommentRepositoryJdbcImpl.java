@@ -8,13 +8,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
 public class CommentRepositoryJdbcImpl implements CommentRepositoryJdbc {
     private final JdbcTemplate jdbcTemplate;
 
-    // ✅ RowMapper 정의
+
     private final RowMapper<CommentJdbc> commentJdbcRowMapper = (rs, rowNum) -> {
         CommentJdbc comment = new CommentJdbc(
                 rs.getString("comment_id"),
@@ -27,7 +28,7 @@ public class CommentRepositoryJdbcImpl implements CommentRepositoryJdbc {
         return comment;
     };
 
-    // 1️⃣ 댓글 생성
+
     @Override
     public void save(CommentJdbc comment) {
         String sql = "INSERT INTO comment (comment_id, content, post_id, user_id, created_at, updated_at) " +
@@ -36,17 +37,29 @@ public class CommentRepositoryJdbcImpl implements CommentRepositoryJdbc {
                 comment.getUserId(), OffsetDateTime.now(), OffsetDateTime.now());
     }
 
-    // 2️⃣ 특정 게시물의 댓글 조회 (삭제되지 않은 댓글만)
+
     @Override
-    public List<CommentJdbc> findByPostId(String postId) {
-        String sql = "SELECT * FROM comment WHERE post_id = ? ORDER BY created_at ASC";
-        return jdbcTemplate.query(sql, commentJdbcRowMapper, postId);
+    public List<CommentJdbc> findAllByPostId(String postId, int page, int offset){
+        String sql = "SELECT * FROM comment WHERE post_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, commentJdbcRowMapper, postId, offset, (page - 1) * offset);
     }
 
-    // 3️⃣ 댓글 삭제 (하드 삭제)
+    @Override
+    public Optional<CommentJdbc> findByCommentId(String commentId) {
+        String sql = "SELECT * FROM comment WHERE comment_id = ?";
+        List<CommentJdbc> comments = jdbcTemplate.query(sql, commentJdbcRowMapper, commentId);
+        return comments.stream().findFirst();
+    }
+
     @Override
     public void deleteByCommentId(String commentId) {
         String sql = "DELETE FROM comment WHERE comment_id = ?";
         jdbcTemplate.update(sql, commentId);
+    }
+
+    @Override
+    public void updateComment(String commentId, String content) {
+        String sql = "UPDATE comment SET content = ?, updated_at = ? WHERE comment_id = ?";
+        jdbcTemplate.update(sql, content, OffsetDateTime.now(), commentId);
     }
 }

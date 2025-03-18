@@ -20,7 +20,7 @@ public class PostConverter {
     }
 
 
-    public static PostResponse.GetPostResponse toGetPostResponse(PostJdbc post, String userName, String userProfileImage) {
+    public static PostResponse.GetPostResponse toGetPostResponse(PostJdbc post, String userName, String userProfileImage,Boolean isLike) {
         return PostResponse.GetPostResponse.builder()
                 .postId(post.getPostId())
                 .title(post.getTitle())
@@ -33,6 +33,7 @@ public class PostConverter {
                 .likeCount(post.getLikeCount())
                 .commentCount(post.getCommentCount())
                 .visitCount(post.getVisitCount())
+                .isLike(isLike)
                 .build();
     }
 
@@ -60,10 +61,10 @@ public class PostConverter {
     }
 
 
-    public static PostResponse.CreateCommentResponse toCreateCommentResponse(String postId, String commentId) {
+    public static PostResponse.CreateCommentResponse toCreateCommentResponse(CommentJdbc comment) {
         return PostResponse.CreateCommentResponse.builder()
-                .postId(postId)
-                .commentId(commentId)
+                .postId(comment.getPostId())
+                .commentId(comment.getCommentId())
                 .build();
     }
     public static PostResponse.GetCommentsResponse  toGetCommentsResponse(List<PostResponse.CommentItem> list) {

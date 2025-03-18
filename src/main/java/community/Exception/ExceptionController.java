@@ -49,4 +49,18 @@ public class ExceptionController {
         response.setMessage(ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
+    @ExceptionHandler(PostException.CommentNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleCommentNotFoundException(PostException.CommentNotFoundException ex) {
+        ExceptionResponse response = new ExceptionResponse();
+        response.setCode("404");
+        response.setMessage(ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+    @ExceptionHandler(PostException.CommentNotMatchUserException.class)
+    public ResponseEntity<ExceptionResponse> handleCommentNotMatchUserException(PostException.CommentNotMatchUserException ex) {
+        ExceptionResponse response = new ExceptionResponse();
+        response.setCode("400");
+        response.setMessage(ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 }

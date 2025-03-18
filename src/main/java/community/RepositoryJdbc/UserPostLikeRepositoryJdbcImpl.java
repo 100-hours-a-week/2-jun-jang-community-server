@@ -31,10 +31,10 @@ public class UserPostLikeRepositoryJdbcImpl implements UserPostLikeRepositoryJdb
 
 
     @Override
-    public Optional<UserPostLikeJdbc> findByPostAndUser(String postId, String userId) {
-        String sql = "SELECT * FROM user_post_like WHERE post_id = ? AND user_id = ?";
-        List<UserPostLikeJdbc> likes = jdbcTemplate.query(sql, userPostLikeRowMapper, postId, userId);
-        return likes.stream().findFirst();
+    public Optional<Boolean> findByPostAndUser(String postId, String userId) {
+        String sql = "SELECT is_like FROM user_post_like WHERE post_id = ? AND user_id = ?";
+        List<Boolean> likes = jdbcTemplate.queryForList(sql, Boolean.class, postId, userId);
+        return likes.stream().findFirst(); // ✅ 좋아요 상태 반환 (없으면 empty)
     }
 
 
@@ -49,16 +49,15 @@ public class UserPostLikeRepositoryJdbcImpl implements UserPostLikeRepositoryJdb
 
     @Override
     public void toggleLike(String postId, String userId) {
-        Optional<UserPostLikeJdbc> existingLike = findByPostAndUser(postId, userId);
+        Optional<Boolean> existingLike = findByPostAndUser(postId, userId);
 
         if (existingLike.isPresent()) {
-
-            boolean newLikeStatus = !existingLike.get().isLike();
+            boolean newLikeStatus = !existingLike.get();
             String sql = "UPDATE user_post_like SET is_like = ?, updated_at = ? WHERE post_id = ? AND user_id = ?";
             jdbcTemplate.update(sql, newLikeStatus, OffsetDateTime.now(), postId, userId);
         } else {
-
-            save(new UserPostLikeJdbc(UUID.randomUUID().toString(), true, postId, userId));
+            save(new UserPostLikeJdbc("LIKE-"+UUID.randomUUID(), true, postId, userId));
         }
     }
+
 }

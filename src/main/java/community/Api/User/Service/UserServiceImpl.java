@@ -75,8 +75,7 @@ public class UserServiceImpl implements UserService {
 
     public UserResponse.GetUserResponse GetUserService(String userId){
         Optional<UserJdbc> user = userRepositoryJdbc.findByUserId(userId);
-        log.info("userId: {}", userId);
-        log.info("user from DB: {}", user.orElse(null));
+
         if (user.isEmpty() || user.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }

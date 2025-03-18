@@ -15,4 +15,16 @@ public class PostException {
             super(message);
         }
     }
+    @NoArgsConstructor
+    public static class CommentNotFoundException extends RuntimeException {
+        public CommentNotFoundException(String message) {
+            super(message);
+        }
+    }
+    @NoArgsConstructor
+    public static class CommentNotMatchUserException extends RuntimeException {
+        public CommentNotMatchUserException(String message) {
+            super(message);
+        }
+    }
 }

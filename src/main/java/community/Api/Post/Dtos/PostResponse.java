@@ -48,6 +48,7 @@ public class PostResponse {
         private int likeCount;
         private int commentCount;
         private int visitCount;
+        private Boolean isLike;
     }
     @Setter
     @Getter

@@ -1,8 +1,6 @@
 package community.Api.Post.Dtos;
 
-import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 public class PostRequest {
     @Getter
@@ -12,7 +10,7 @@ public class PostRequest {
         private String contentImage;
     }
     @Getter
-    public static class UpdatePostRequest {
+    public static class PatchPostRequest {
         private String title;
         private String content;
         private String contentImage;
@@ -22,7 +20,7 @@ public class PostRequest {
         private String content;
     }
     @Getter
-    public static class UpdateCommentRequest {
+    public static class PutCommentRequest {
         private String content;
     }
 
