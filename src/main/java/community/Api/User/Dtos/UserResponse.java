@@ -23,6 +23,7 @@ public class UserResponse {
     @Setter
     @Builder
     public static class GetUserResponse{
+        private String userId;
         private String email;
         private String nickname;
         private String profileImage;

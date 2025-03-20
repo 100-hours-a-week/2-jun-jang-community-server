@@ -20,7 +20,7 @@ public class PostController {
         return new ApiResponse<>(postService.CreatePostService(request, JwtUtil.getAuthenticatedUserId()),"201");
     }
     @GetMapping("")
-    ApiResponse<PostResponse.GetPostsResponse> GetPostsController(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int offset) {
+    ApiResponse<PostResponse.GetPostsResponse> GetPostsController(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int offset) {
         return new ApiResponse<>(postService.GetPostsService(page, offset), "200");
     }
     @GetMapping("/{postId}")
@@ -41,7 +41,7 @@ public class PostController {
         return new ApiResponse<>(postService.CreateCommentService(request,JwtUtil.getAuthenticatedUserId(), postId), "201");
     }
     @GetMapping("/{postId}/comments")
-    ApiResponse<PostResponse.GetCommentsResponse> GetCommentsController(@PathVariable String postId,@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int offset) {
+    ApiResponse<PostResponse.GetCommentsResponse> GetCommentsController(@PathVariable String postId,@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int offset) {
         return new ApiResponse<>(postService.GetCommentsService(postId,page,offset), "200");
     }
     @PutMapping("/{postId}/comments/{commentId}")

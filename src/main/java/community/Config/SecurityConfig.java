@@ -1,7 +1,7 @@
 package community.Config;
 
 import community.Security.CustomUserDetailsService;
-import community.Common.JwtAuthenticationFilter;
+import community.Security.JwtAuthenticationFilter;
 import community.utill.JwtUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,10 +24,12 @@ import java.util.List;
 public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final CorsConfig corsConfig;
 
-    public SecurityConfig(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService, CorsConfig corsConfig) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.corsConfig = corsConfig;
     }
 
     @Bean
@@ -53,12 +55,17 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users", "/users/token").permitAll()
+                        .requestMatchers("/users", "/users/token","/images").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
-                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, List.of("/users", "/users/token")), UsernamePasswordAuthenticationFilter.class);
+                .addFilter(corsConfig.corsFilter())
+                .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, List.of("/users", "/users/token","/images")), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
+
+
+
 }

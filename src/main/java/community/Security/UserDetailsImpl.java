@@ -1,6 +1,6 @@
 package community.Security;
 
-import community.Model.JdbcModel.UserJdbc;
+import community.Model.JpaModel.UserJpa;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -8,14 +8,14 @@ import java.util.Collection;
 import java.util.Collections;
 
 public class UserDetailsImpl implements UserDetails {
-    private final UserJdbc userJdbc;
+    private final UserJpa userJpa;
 
-    public UserDetailsImpl(UserJdbc userJdbc) {
-        this.userJdbc = userJdbc;
+    public UserDetailsImpl(UserJpa userJpa) {
+        this.userJpa = userJpa;
     }
 
     public String getUserId() {
-        return userJdbc.getUserId();
+        return userJpa.getUserId();
     }
 
     @Override
@@ -25,12 +25,12 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public String getPassword() {
-        return userJdbc.getPassword();
+        return userJpa.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return userJdbc.getUserId();
+        return userJpa.getUserId();
     }
 
     @Override

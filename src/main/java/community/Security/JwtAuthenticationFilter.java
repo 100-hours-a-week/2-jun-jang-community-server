@@ -1,4 +1,4 @@
-package community.Common;
+package community.Security;
 
 import community.utill.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         String requestURI = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
-
+        // DELETE 요청이 아니라면, 인증 제외할 경로 확인
         if (!method.equals("DELETE") && excludedPaths.contains(requestURI)) {
             chain.doFilter(request, response);
             return;
@@ -71,7 +71,30 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
             chain.doFilter(request, response);
         } catch (ExpiredJwtException e) {
-            sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED, "토큰이 만료되었습니다.");
+            // 🔹 액세스 토큰 만료 시 리프레시 토큰을 사용하여 재발급 시도
+            String refreshToken = httpRequest.getHeader("refreshToken");
+            log.info("Refresh token: {}", refreshToken);
+            if (refreshToken != null && !refreshToken.isEmpty()) {
+                try {
+                    Claims refreshClaims = jwtUtil.validateToken(refreshToken);
+                    String userId = refreshClaims.getSubject();
+
+                    // 새 accessToken 생성
+                    String newAccessToken = jwtUtil.generateAccessToken(userId);
+                    log.info("New access token: {}", newAccessToken);
+                    // 🔹 새 accessToken을 응답 헤더에 추가
+                    httpResponse.setHeader("Authorization", "Bearer " + newAccessToken);
+                    httpResponse.setHeader("Access-Control-Expose-Headers", "Authorization");
+                    // 🔹 응답을 계속 진행 (클라이언트가 새 accessToken을 사용할 수 있도록)
+                    chain.doFilter(request, response);
+                    return;
+                } catch (Exception ex) {
+                    sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED, "Refresh Token이 유효하지 않습니다.");
+                    return;
+                }
+            }
+
+            sendErrorResponse(httpResponse, HttpServletResponse.SC_UNAUTHORIZED, "Access Token이 만료되었습니다. Refresh Token을 사용해 주세요.");
             return;
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -79,6 +102,8 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             return;
         }
     }
+
+
 
 
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {

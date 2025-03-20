@@ -12,16 +12,16 @@ import java.time.OffsetDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiResponse <T>{
-    private boolean isSuccess=true;
-    private String code=null;
-    private final String message="성공했습니다.";
+public class ApiResponse <T> {
+    private boolean isSuccess = true;
+    private String code = null;
+    private final String message = "성공했습니다.";
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     private OffsetDateTime responseAt = OffsetDateTime.now();
     private T data = null;
 
-    public ApiResponse(T data, String code){
-        this.data=data;
-        this.code=code;
+    public ApiResponse(T data, String code) {
+        this.data = data;
+        this.code = code;
     }
 }

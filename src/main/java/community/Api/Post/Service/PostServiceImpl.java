@@ -8,14 +8,24 @@ import community.Exception.UserException.UserException;
 import community.Model.JdbcModel.CommentJdbc;
 import community.Model.JdbcModel.PostJdbc;
 import community.Model.JdbcModel.UserJdbc;
-import community.Model.JdbcModel.UserPostLikeJdbc;
-import community.RepositoryJdbc.CommentRepositoryJdbc;
-import community.RepositoryJdbc.PostRepositoryJdbc;
-import community.RepositoryJdbc.UserPostLikeRepositoryJdbc;
-import community.RepositoryJdbc.UserRepositoryJdbc;
+
+import community.Model.JpaModel.CommentJpa;
+import community.Model.JpaModel.PostJpa;
+import community.Model.JpaModel.UserJpa;
+import community.Model.JpaModel.UserPostLikeJpa;
+import community.Repository.RepositoryJpa.CommentRepositoryJpa;
+import community.Repository.RepositoryJpa.PostRepositoryJpa;
+import community.Repository.RepositoryJpa.UserPostLikeRepositoryJpa;
+import community.Repository.RepositoryJpa.UserRepositoryJpa;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -24,215 +34,279 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class PostServiceImpl implements PostService {
-    private final UserRepositoryJdbc userRepository;
-    private final PostRepositoryJdbc postRepository;
-    private final CommentRepositoryJdbc commentRepository;
-    private final UserPostLikeRepositoryJdbc userPostLikeRepository;
+//    private final UserRepositoryJdbc userRepository;
+//    private final PostRepositoryJdbc postRepository;
+//    private final CommentRepositoryJdbc commentRepository;
+//    private final UserPostLikeRepositoryJdbc userPostLikeRepository;
+    private final UserRepositoryJpa userRepository;
+    private final PostRepositoryJpa postRepository;
+    private final CommentRepositoryJpa commentRepository;
+    private final UserPostLikeRepositoryJpa userPostLikeRepository;
     @Override
     public PostResponse.CreatePostResponse CreatePostService(PostRequest.CreatePostRequest request, String userId) {
-        Optional<UserJdbc> user = userRepository.findByUserId(userId);
+        Optional<UserJpa> userJpaOptional = userRepository.findById(userId);
 
-        if (user.isEmpty() || user.get().getDeletedAt() != null) {
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
 
-        UserJdbc userJdbc = user.get();
+        UserJpa userJpa = userJpaOptional.get();
 
         String postId= "POST-"+ UUID.randomUUID();
 
-        PostJdbc postJdbc = new PostJdbc(
-                postId,
-                request.getTitle(),
-                request.getContent(),
-                request.getContentImage(),
-                0,
-                0,
-                0,
-                userId,
-                null
-        );
+        PostJpa postJpa= PostJpa.builder()
+                .postId(postId)
+                .title(request.getTitle())
+                .content(request.getContent())
+                .contentImage(request.getContentImage())
+                .commentCount(0)
+                .likeCount(0)
+                .user(userJpa)
+                .build();
+        postRepository.save(postJpa);
+
+//        PostJdbc postJdbc = new PostJdbc(
+//                postId,
+//                request.getTitle(),
+//                request.getContent(),
+//                request.getContentImage(),
+//                0,
+//                0,
+//                0,
+//                userId,
+//                null
+//        );
 
 
-        postJdbc.setCreatedAt(OffsetDateTime.now());
-        postJdbc.setUpdatedAt(OffsetDateTime.now());
+//        postJdbc.setCreatedAt(OffsetDateTime.now());
+//        postJdbc.setUpdatedAt(OffsetDateTime.now());
 
-        postRepository.save(postJdbc);
+        postRepository.save(postJpa);
 
-        return PostConverter.toCreatePostResponse(postJdbc);
+        return PostConverter.toCreatePostResponse(postJpa);
     }
-    public PostResponse.GetPostsResponse GetPostsService(int page, int offset){
-        List<String> posts=postRepository.findAllPostIds(page, offset);
-        List<PostResponse.PostsItem> responses=posts.stream().map(response ->{
-            Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(response);
-            PostJdbc postJdbc=postJdbcOptional.get();
-            Optional<UserJdbc> userJdbc=userRepository.findByUserId(postJdbc.getUserId());
-            UserJdbc user=userJdbc.get();
-            return PostConverter.toPostsItem(postJdbc,user.getNickname(),user.getUserProfile());
-        }).toList();
+    public PostResponse.GetPostsResponse GetPostsService(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // JPA 페이징 적용된 조회
+        Page<PostJpa> postPage = postRepository.findAll(pageable);
+
+        // 삭제되지 않은 게시물만 필터링
+        List<PostResponse.PostsItem> responses = postPage.getContent().stream()
+                .filter(post -> post.getDeletedAt() == null)
+                .map(post -> {
+                    log.info(post.getTitle());
+                    UserJpa user = userRepository.findById(post.getUser().getUserId())
+                            .orElseThrow(() -> new UserException.UserNotFoundException("유저를 찾을 수 없습니다."));
+                    return PostConverter.toPostsItem(post, user.getNickname(), user.getUserProfile());
+                }).toList();
+
 
         return PostConverter.toGetPostsResponse(responses);
     }
+    @Transactional
     public PostResponse.GetPostResponse GetPostService(String postId,String userId){
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-        PostJdbc post=postJdbcOptional.get();
-        Optional<UserJdbc> postWriterJdbcOptional =userRepository.findByUserId(post.getUserId());
-        UserJdbc writer = postWriterJdbcOptional.get();
-        Optional<Boolean>userPostLikeJdbc=userPostLikeRepository.findByPostAndUser(postId,userId);
+        PostJpa post=postJpaOptional.get();
+        Optional<UserJpa> postWriterJpaOptional =userRepository.findById(post.getUser().getUserId());
+        UserJpa writer = postWriterJpaOptional.get();
+        //유저가 좋아요를 눌렀는지 확인
+        Optional<UserJpa> userJpaOptional =userRepository.findById(userId);
+        if(userJpaOptional.isEmpty()||userJpaOptional.get().getDeletedAt()!=null){
+            throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
+        }
+
+        UserJpa user = userJpaOptional.get();
+
+        Optional<UserPostLikeJpa>userPostLikeJpa=userPostLikeRepository.findByPostAndUser(post,user);
 
         Boolean is_like=false;
-        if(userPostLikeJdbc.isPresent()&&userPostLikeJdbc.get()){
+        if(userPostLikeJpa.isPresent()&&userPostLikeJpa.get().isLike()){
             is_like=true;
         }
+
         int visitCount=post.getVisitCount()+1;
-        postRepository.updateVisitCount(postId, visitCount);
+        post.setVisitCount(visitCount);
+
         return PostConverter.toGetPostResponse(post, writer.getNickname(), writer.getUserProfile(),is_like);
     }
+    @Transactional
     public String PatchPostService(PostRequest.PatchPostRequest request, String userId, String postId) {
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
-        UserJdbc user=userJdbcOptional.get();
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        UserJpa userJpa=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-        PostJdbc post=postJdbcOptional.get();
-        if(!user.getUserId().equals(post.getUserId())){
+        PostJpa postJpa=postJpaOptional.get();
+        if(!userJpa.getUserId().equals(postJpa.getUser().getUserId())){
             throw new PostException.PostNotMatchUserException("해당 게시물의 작성자가 아닙니다.");
         }
-
-        //수정 로직 시작
-        String title = request.getTitle()!=null ? request.getTitle() : post.getTitle();
-        String content = request.getContent()!=null ? request.getContent() : post.getContent();
-        String contentImage= request.getContentImage()!=null ? request.getContentImage() : post.getContentImage();
-        postRepository.updatePost(postId, title, content, contentImage);
+        postJpa.setTitle(request.getTitle()!=null ? request.getTitle() : postJpa.getTitle());
+        postJpa.setContent(request.getContent()!=null ? request.getContent() : postJpa.getContent());
+        postJpa.setContentImage(request.getContentImage()!=null ? request.getContentImage() : postJpa.getContentImage());
         return "게시물 수정에 성공했습니다.";
     }
+    @Transactional
     public String DeletePostService(String postId,String userId) {
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
-        UserJdbc user=userJdbcOptional.get();
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        UserJpa user=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-        PostJdbc post=postJdbcOptional.get();
-        if(!user.getUserId().equals(post.getUserId())){
+        PostJpa post=postJpaOptional.get();
+        if(!user.getUserId().equals(post.getUser().getUserId())){
             throw new PostException.PostNotMatchUserException("해당 게시물의 작성자가 아닙니다.");
         }
-        postRepository.deletePost(postId);
+        post.setDeletedAt(OffsetDateTime.now());
         return "삭제에 성공했습니다";
     }
+    @Transactional
     public PostResponse.CreateCommentResponse CreateCommentService(PostRequest.CreateCommentRequest request, String userId,String postId){
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
-        UserJdbc user=userJdbcOptional.get();
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        UserJpa user=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
+        PostJpa post=postJpaOptional.get();
         //댓글 수 증가
-        PostJdbc post=postJdbcOptional.get();
+
         int commentCount=post.getCommentCount()+1;
-        postRepository.updateCommentCount(postId, commentCount);
+        post.setCommentCount(commentCount);
 
         String commentId="COMMENT-"+ UUID.randomUUID();
-        CommentJdbc commentJdbc=new CommentJdbc(commentId,request.getContent(),postId,user.getUserId());
-        commentJdbc.setCreatedAt(OffsetDateTime.now());
-        commentJdbc.setUpdatedAt(OffsetDateTime.now());
-        commentRepository.save(commentJdbc);
-        return PostConverter.toCreateCommentResponse(commentJdbc);
+        CommentJpa commentJpa = CommentJpa.builder()
+                .commentId(commentId)
+                .content(request.getContent())
+                .user(user)
+                .post(post).build();
+
+        commentRepository.save(commentJpa);
+        return PostConverter.toCreateCommentResponse(commentJpa);
     }
     public PostResponse.GetCommentsResponse GetCommentsService(String postId,int page, int offset){
-        List<CommentJdbc> commentJdbc=commentRepository.findAllByPostId(postId,page,offset);
-        List<PostResponse.CommentItem> commentItems=commentJdbc.stream().map(comment->{
-            Optional<UserJdbc>userOptional=userRepository.findByUserId(comment.getUserId());
-            log.info(comment.getContent());
-            if(userOptional.isEmpty()||userOptional.get().getDeletedAt()!=null){
-                return null;
-            }
-            log.info(comment.getContent());
-            UserJdbc user=userOptional.get();
-            return PostConverter.toCommentItem(comment,user);
-        }).filter(Objects::nonNull).toList();
-        return PostConverter.toGetCommentsResponse(commentItems);
-    }
-    public String PutCommentService(String postId, PostRequest.PutCommentRequest request, String userId,String commentId) {
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
-            throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
-        }
-        UserJdbc user=userJdbcOptional.get();
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+
+        Pageable pageable = PageRequest.of(page, offset, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()||postJpaOptional.get().getDeletedAt()!=null){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-        Optional<CommentJdbc>commentJdbcOptional=commentRepository.findByCommentId(commentId);
-        if(commentJdbcOptional.isEmpty()){
+        PostJpa post=postJpaOptional.get();
+        // 특정 게시글의 댓글을 페이징하여 조회
+        Page<CommentJpa> commentPage = commentRepository.findAllByPost(post, pageable);
+
+        // DTO로 변환
+        List<PostResponse.CommentItem> comments = commentPage.getContent().stream()
+                .map(PostConverter::toCommentItem).toList();
+
+        return PostConverter.toGetCommentsResponse(comments);
+
+    }
+    @Transactional
+    public String PutCommentService(String postId, PostRequest.PutCommentRequest request, String userId,String commentId) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
+            throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
+        }
+        UserJpa user=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
+            throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
+        }
+        Optional<CommentJpa>commentJpaOptional=commentRepository.findById(commentId);
+        if(commentJpaOptional.isEmpty()){
             throw new PostException.PostNotFoundException("해당 댓글을 찾을 수 없습니다.");
         }
-        CommentJdbc comment=commentJdbcOptional.get();
-        if(!user.getUserId().equals(comment.getUserId())){
+        CommentJpa comment=commentJpaOptional.get();
+        if(!user.getUserId().equals(comment.getUser().getUserId())){
             throw new PostException.CommentNotMatchUserException("해당 댓글의 작성자가 아닙니다.");
         }
 
         String content=request.getContent()!=null ? request.getContent() : comment.getContent();
-        commentRepository.updateComment(commentId, content);
+        comment.setContent(content);
         return "댓글 수정에 성공했습니다.";
 
     }
+    @Transactional
     public String DeleteCommentService(String postId, String commentId, String userId) {
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
-        UserJdbc user=userJdbcOptional.get();
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        UserJpa user=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-
-        Optional<CommentJdbc>commentJdbcOptional=commentRepository.findByCommentId(commentId);
-        if(commentJdbcOptional.isEmpty()){
+        Optional<CommentJpa>commentJpaOptional=commentRepository.findById(commentId);
+        if(commentJpaOptional.isEmpty()){
             throw new PostException.PostNotFoundException("해당 댓글을 찾을 수 없습니다.");
         }
-        CommentJdbc comment=commentJdbcOptional.get();
-        if(!user.getUserId().equals(comment.getUserId())){
+        CommentJpa comment=commentJpaOptional.get();
+        if(!user.getUserId().equals(comment.getUser().getUserId())){
             throw new PostException.CommentNotMatchUserException("해당 댓글의 작성자가 아닙니다.");
         }
-        PostJdbc post=postJdbcOptional.get();
+
+        PostJpa post=postJpaOptional.get();
         int commentCount=post.getCommentCount()-1;
-        postRepository.updateCommentCount(postId, commentCount);
-        commentRepository.deleteByCommentId(commentId);
+        post.setCommentCount(commentCount);
+        commentRepository.delete(comment);
         return "댓글 삭제에 성공했습니다.";
     }
+    @Transactional
     public String DoLikeService(String postId, String userId) {
-        Optional<UserJdbc> userJdbcOptional=userRepository.findByUserId(userId);
-        if (userJdbcOptional.isEmpty() || userJdbcOptional.get().getDeletedAt() != null) {
+        Optional<UserJpa> userJpaOptional=userRepository.findById(userId);
+        if (userJpaOptional.isEmpty() || userJpaOptional.get().getDeletedAt() != null) {
             throw new UserException.UserNotFoundException("유저를 찾을 수 없거나 탈퇴한 계정입니다.");
         }
-
-        Optional<PostJdbc> postJdbcOptional=postRepository.findByPostId(postId);
-        if(postJdbcOptional.isEmpty()){
+        UserJpa user=userJpaOptional.get();
+        Optional<PostJpa> postJpaOptional=postRepository.findById(postId);
+        if(postJpaOptional.isEmpty()){
             throw  new PostException.PostNotFoundException("게시물을 찾을 수 없거나 삭제된 게시물입니다.");
         }
-        Optional<Boolean> likeOptional=userPostLikeRepository.findByPostAndUser(postId, userId);
-        int likeCount=postJdbcOptional.get().getLikeCount();
-        if(likeOptional.isEmpty()||!likeOptional.get()){
+        PostJpa post=postJpaOptional.get();
+        Optional<UserPostLikeJpa> likeOptional=userPostLikeRepository.findByPostAndUser(post,user);
+        UserPostLikeJpa userPostLikeJpa;
+        int likeCount=post.getLikeCount();
+        if(likeOptional.isEmpty()){
+            String likeId="LIKE-"+ UUID.randomUUID();
             likeCount++;
+            userPostLikeJpa=UserPostLikeJpa.builder()
+                    .likeId(likeId)
+                    .user(user)
+                    .post(post)
+                    .isLike(true)
+                    .build();
+            userPostLikeRepository.save(userPostLikeJpa);
         }else{
-            likeCount--;
+            userPostLikeJpa=likeOptional.get();
+            if(!userPostLikeJpa.isLike()){
+                likeCount+=1;
+                userPostLikeJpa.setLike(true);
+            }else{
+                likeCount-=1;
+                userPostLikeJpa.setLike(false);
+            }
         }
-        postRepository.updateLikeCount(postId, likeCount);
-        userPostLikeRepository.toggleLike(postId, userId);
+
+
+
+        post.setLikeCount(likeCount);
+
         return "좋아요가 업데이트 되었습니다";
     }
 }

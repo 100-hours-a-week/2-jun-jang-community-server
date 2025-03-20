@@ -2,8 +2,10 @@ package community.Api.Post.Converter;
 
 import community.Api.Post.Dtos.PostResponse;
 import community.Model.JdbcModel.CommentJdbc;
-import community.Model.JdbcModel.PostJdbc;
+
 import community.Model.JdbcModel.UserJdbc;
+import community.Model.JpaModel.CommentJpa;
+import community.Model.JpaModel.PostJpa;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -13,19 +15,19 @@ public class PostConverter {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
 
-    public static PostResponse.CreatePostResponse toCreatePostResponse(PostJdbc post) {
+    public static PostResponse.CreatePostResponse toCreatePostResponse(PostJpa post) {
         return PostResponse.CreatePostResponse.builder()
                 .postId(post.getPostId())
                 .build();
     }
 
 
-    public static PostResponse.GetPostResponse toGetPostResponse(PostJdbc post, String userName, String userProfileImage,Boolean isLike) {
+    public static PostResponse.GetPostResponse toGetPostResponse(PostJpa post, String userName, String userProfileImage, Boolean isLike) {
         return PostResponse.GetPostResponse.builder()
                 .postId(post.getPostId())
                 .title(post.getTitle())
                 .content(post.getContent())
-                .userId(post.getUserId())
+                .userId(post.getUser().getUserId())
                 .userName(userName)
                 .userProfileImage(userProfileImage)
                 .contentImage(post.getContentImage())
@@ -46,14 +48,14 @@ public class PostConverter {
     }
 
 
-    public static PostResponse.PostsItem toPostsItem(PostJdbc post, String userName, String userProfileImage) {
+    public static PostResponse.PostsItem toPostsItem(PostJpa post, String userName, String userProfileImage) {
         return PostResponse.PostsItem.builder()
                 .postId(post.getPostId())
                 .title(post.getTitle())
                 .likeCount(post.getLikeCount())
                 .commentCount(post.getCommentCount())
                 .visitCount(post.getVisitCount())
-                .userId(post.getUserId())
+                .userId(post.getUser().getUserId())
                 .userName(userName)
                 .userProfileImage(userProfileImage)
                 .createdAt(post.getCreatedAt().format(formatter))
@@ -61,9 +63,9 @@ public class PostConverter {
     }
 
 
-    public static PostResponse.CreateCommentResponse toCreateCommentResponse(CommentJdbc comment) {
+    public static PostResponse.CreateCommentResponse toCreateCommentResponse(CommentJpa comment) {
         return PostResponse.CreateCommentResponse.builder()
-                .postId(comment.getPostId())
+                .postId(comment.getPost().getPostId())
                 .commentId(comment.getCommentId())
                 .build();
     }
@@ -72,13 +74,13 @@ public class PostConverter {
                 .comments(list)
                 .build();
     }
-    public static PostResponse.CommentItem toCommentItem(CommentJdbc comment, UserJdbc user) {
+    public static PostResponse.CommentItem toCommentItem(CommentJpa comment) {
         return PostResponse.CommentItem.builder()
                 .commentId(comment.getCommentId())
-                .userId(comment.getUserId())
+                .userId(comment.getUser().getUserId())
                 .content(comment.getContent())
-                .userName(user.getNickname())
-                .userProfileImage(user.getUserProfile())
+                .userName(comment.getUser().getNickname())
+                .userProfileImage(comment.getUser().getUserProfile())
                 .createdAt(comment.getCreatedAt().toString())
                 .build();
     }
