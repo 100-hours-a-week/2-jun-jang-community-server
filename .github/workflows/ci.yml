@@ -25,6 +25,5 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
-      - name: Docker Build
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/ktb-api .
+
 
