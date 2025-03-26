@@ -41,4 +41,4 @@ out/
 .vscode/
 
 ### Firebase ###
-bill-firebase-api-key.json
+bill-firebase-api-key.jsonbuild/resources/main/application.yml
