@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Docker Build
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/ktb-api .
+
       - name: Docker Login
         uses: docker/login-action@v2
         with:
