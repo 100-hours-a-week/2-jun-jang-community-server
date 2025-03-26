@@ -75,6 +75,8 @@ jobs:
               -e SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }} \
               -e SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }} \
               -e SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=${{ secrets.SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE }} \
-              -e SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=${{ secrets.SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE }}
+              -e SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=${{ secrets.SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/ktb-api:latest
 
-            docker image prune -af
+            sudo docker rm $(sudo docker ps --filter 'status=exited' -a -q)
+            sudo docker image prune -a -f
