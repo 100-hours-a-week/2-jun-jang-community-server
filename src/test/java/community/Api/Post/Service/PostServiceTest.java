@@ -6,6 +6,7 @@ import community.Common.Enums.MessageCode;
 import community.Model.Comment;
 import community.Model.Post;
 import community.Model.User;
+import community.Model.UserPostLike;
 import community.Repository.CommentRepository;
 import community.Repository.PostRepository;
 import community.Repository.UserPostLikeRepository;
@@ -51,7 +52,7 @@ class PostServiceTest {
 
     @Mock
     private CommentRepository commentRepository;
-    
+
     private User user;
     private Post post;
 
@@ -213,6 +214,48 @@ class PostServiceTest {
     }
 
     @Test
+    @DisplayName("댓글 수정 성공 - content 존재 시 갱신")
+    void putComment_withNewContent_success() {
+        Comment comment = Comment.builder()
+                .commentId("COMMENT-2")
+                .content("기존 댓글")
+                .user(user)
+                .build();
+
+        PostRequest.PutCommentRequest request = PostRequest.PutCommentRequest.builder()
+                .content("새 댓글")
+                .build();
+
+        when(entityValidator.getValidUserOrThrow("USER-123")).thenReturn(user);
+        when(entityValidator.getValidCommentOrThrow("COMMENT-2")).thenReturn(comment);
+
+        String result = postService.putCommentService("POST-123", request, "USER-123", "COMMENT-2");
+
+        assertThat(result).isEqualTo(MessageCode.COMMENT_UPDATED.getMessage());
+        assertThat(comment.getContent()).isEqualTo("새 댓글");
+    }
+
+    @Test
+    @DisplayName("댓글 삭제하기")
+    void deleteComment_success() {
+
+        Comment comment = Comment.builder()
+                .commentId("COMMENT-2")
+                .content("기존 댓글")
+                .user(user)
+                .build();
+
+
+        when(entityValidator.getValidUserOrThrow("USER-123")).thenReturn(user);
+        when(entityValidator.getValidPostOrThrow("POST-123")).thenReturn(post);
+        when(entityValidator.getValidCommentOrThrow("COMMENT-2")).thenReturn(comment);
+
+        String result = postService.deleteCommentService("POST-123", "USER-123", "COMMENT-2");
+        assertThat(result).isEqualTo(MessageCode.COMMENT_DELETED.getMessage());
+
+    }
+
+    @Test
     @DisplayName("좋아요 처음 누르기")
     void doLike_firstTime_success() {
         when(entityValidator.getValidUserOrThrow("USER-123")).thenReturn(user);
@@ -223,6 +266,45 @@ class PostServiceTest {
 
         assertThat(result).isEqualTo(MessageCode.LIKE_UPDATED.getMessage());
         verify(userPostLikeRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("좋아요 두번째 누르기")
+    void doLike_secondTime_success() {
+        UserPostLike userPostLike = UserPostLike.builder()
+                .likeId("LIKE-001").post(post).user(user).isLike(true).build();
+
+        when(entityValidator.getValidUserOrThrow("USER-123")).thenReturn(user);
+        when(entityValidator.getValidPostOrThrow("POST-123")).thenReturn(post);
+        when(userPostLikeRepository.findByPostAndUser(post, user)).thenReturn(Optional.of(userPostLike));
+        String result = postService.doLikeService("POST-123", "USER-123");
+        assertThat(result).isEqualTo(MessageCode.LIKE_UPDATED.getMessage());
+
+        verify(userPostLikeRepository).findByPostAndUser(post, user);
+    }
+
+
+    @Test
+    @DisplayName("댓글 목록 조회 - 정상 페이징")
+    void getComments_success() {
+        Comment comment1 = Comment.builder()
+                .commentId("COMMENT-1")
+                .content("댓글1")
+                .user(user)
+                .post(post)
+                .build();
+
+        List<Comment> comments = List.of(comment1);
+        Page<Comment> page = new PageImpl<>(comments);
+
+        when(entityValidator.getValidPostOrThrow("POST-123")).thenReturn(post);
+        when(commentRepository.findAllByPost(eq(post), any(Pageable.class))).thenReturn(page);
+
+        PostResponse.GetCommentsResponse response = postService.getCommentsService("POST-123", 0, 10);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getComments()).hasSize(1);
+        assertThat(response.getComments().get(0).getContent()).isEqualTo("댓글1");
     }
 
 }
