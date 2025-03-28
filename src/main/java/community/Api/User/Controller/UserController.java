@@ -30,7 +30,7 @@ public class UserController {
         return authentication.getName();
     }
 
-    //더미 값만 생성
+
     @PostMapping("")
     public ApiResponse<UserResponse.CreateUserResponse> createUserController(@RequestBody UserRequest.CreateUserRequest request) {
 

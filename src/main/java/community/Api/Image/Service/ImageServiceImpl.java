@@ -20,7 +20,7 @@ public class ImageServiceImpl implements ImageService {
 
     private final AmazonS3 amazonS3Client;
     @Value("${cloud.aws.s3.bucket}")
-    private String bucket;
+    protected String bucket;
     private String IMG_DIR = "img/";
 
     @Override

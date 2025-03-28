@@ -13,7 +13,7 @@ import java.time.OffsetDateTime;
 
 
 @Entity
-@Table(name = "user") // 테이블 이름 지정
+@Table(name = "\"user\"")// 테이블 이름 지정
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
