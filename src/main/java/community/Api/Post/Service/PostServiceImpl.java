@@ -59,8 +59,6 @@ public class PostServiceImpl implements PostService {
         postRepository.save(postJpa);
 
 
-        postRepository.save(postJpa);
-
         return PostConverter.toCreatePostResponse(postJpa);
     }
 
@@ -78,7 +76,7 @@ public class PostServiceImpl implements PostService {
                     return PostConverter.toPostsItem(post, user.getNickname(), user.getUserProfile());
                 }).toList();
 
-
+       
         return PostConverter.toGetPostsResponse(responses);
     }
 
@@ -225,7 +223,7 @@ public class PostServiceImpl implements PostService {
 
         System.out.println("After like count = " + post.getLikeCount());
 
-        
+
         return MessageCode.LIKE_UPDATED.getMessage();
     }
 

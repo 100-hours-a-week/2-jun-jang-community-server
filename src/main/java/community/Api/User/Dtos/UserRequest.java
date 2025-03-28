@@ -1,12 +1,12 @@
 package community.Api.User.Dtos;
 
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 
 public class UserRequest {
     @Getter
-    @Setter
+    @Builder
     public static class CreateUserRequest {
         private String email;
         private String password;
@@ -15,19 +15,21 @@ public class UserRequest {
     }
 
     @Getter
-    @Setter
+    @Builder
     public static class LoginUserRequest {
         private String email;
         private String password;
     }
 
     @Getter
+    @Builder
     public static class UpdateUserProfileRequest {
         private String nickname;
         private String profileImage;
     }
 
     @Getter
+    @Builder
     public static class UpdateUserPasswordRequest {
         private String password;
 

@@ -38,7 +38,6 @@ public class PostConverter {
 
 
     public static PostResponse.GetPostsResponse toGetPostsResponse(List<PostResponse.PostsItem> posts) {
-
         return PostResponse.GetPostsResponse.builder()
                 .posts(posts)
                 .build();
